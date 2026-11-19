@@ -15,7 +15,7 @@ import com.jogo.world.Node;
 import com.jogo.world.Vector2i;
 import com.jogo.world.World;
 
-public class Enemy extends Entity{
+public class Enemy extends DamageableEntity{
 	
 	private double speed = 1;
 
@@ -34,19 +34,17 @@ public class Enemy extends Entity{
 	
 	private BufferedImage enemyfrontdamage = Game.spritesheet.getSprite(0, 224, 32, 32);
 	private BufferedImage enemybackdamage = Game.spritesheet.getSprite(32, 224, 32, 32);
-	
-	public int health = 75;
+
 	
 	public int enemyID;
 	
 	public Enemy(int x, int y, int width, int height, BufferedImage sprite) {
 		super(x, y, width, height, null);
+		this.health = 75;
 	}
 
 	public void tick() {
 		depth = 9;
-		
-		
 		
 		enemyID = Game.enemies.indexOf(this);
 		
@@ -59,9 +57,12 @@ public class Enemy extends Entity{
 					}
 		}else 
 			if(Game.rand.nextInt(100) < 10) {
+				/*
 				//Início da batalha
 				Game.battle = true;
 				Game.enemyID = enemyID;
+				*/
+				Game.player.damage(10);
 			}
 			if(Game.rand.nextInt(100) < 97) followPath(path,speed,this);
 			if(Game.rand.nextInt(100) < 10) {
@@ -74,7 +75,8 @@ public class Enemy extends Entity{
 		masky = -16;
 		maskw = 64;
 		maskh = 64;
-		
+
+		// Antigo algoritmo de perseguição ao jogador
 		/*
 		if(this.distance(this.getX(), this.getY(), Game.player.getX(), Game.player.getY())<160) {
 		if (this.isCollidingWithPlayer() == false) {
@@ -123,32 +125,44 @@ public class Enemy extends Entity{
 				return;
 			}
 			}
-	
-		public void destroy() {
-			Game.enemies.remove(this);
-			Game.entities.remove(this);
-		}
-	
-		public void collisionBullet() {
-			for(int i = 0; i < Game.bullets.size(); i++ ) {
-				Entity e = Game.bullets.get(i);
-				if(Entity.isColliding(this, e)) {
-						health -= Game.player.revolverDamage*Game.player.attack/10;
-						Game.bullets .remove(i);
-						isDamaged = true;
-						return;	
-				}
+
+	public void destroy() {
+		Game.enemies.remove(this);
+		Game.entities.remove(this);
+	}
+	 
+	public void collisionBullet() {
+		for(int i = 0; i < Game.bullets.size(); i++ ) {
+			Entity e = Game.bullets.get(i);
+			if(Entity.isColliding(this, e)) {
+				this.applyDamage((int)(Game.player.revolverDamage*Game.player.attack/10));
+				health -= Game.player.revolverDamage*Game.player.attack/10;
+				Game.bullets .remove(i);
+				isDamaged = true;
+				return;
 			}
-		
 		}
-	
-		public boolean isCollidingWithPlayer() {
-			Rectangle enemyCurrent = new Rectangle(this.getX()+maskx,this.getY()+masky,maskw,maskh);
-			Rectangle player = new Rectangle(Game.player.getX(),Game.player.getY(),32,32);
-			return enemyCurrent.intersects(player);
+	}
+
+	public boolean isCollidingWithPlayer() {
+		Rectangle enemyCurrent = new Rectangle(this.getX()+maskx,this.getY()+masky,maskw,maskh);
+		Rectangle player = new Rectangle(Game.player.getX(),Game.player.getY(),32,32);
+		return enemyCurrent.intersects(player);
+	}
+
+	public void blood(int damage) {
+		for(int i = 0; i < damage; i++) {
+			Blood blood = new Blood(
+					this.getX() + Game.rand.nextInt(32),
+					this.getY() + Game.rand.nextInt(32),
+					2,
+					2,
+					null,
+					2
+			);
+			Game.entities.add(blood);
 		}
-	
-		
+	}
 		
 	public void render(Graphics g) {
 		super.render(g);
@@ -161,7 +175,8 @@ public class Enemy extends Entity{
 		if(!isDamaged) {
 		g.drawImage(this.enemyfront,this.getX() - Camera.x,this.getY() - Camera.y,null);
 		}else if(isDamaged) {
-		g.drawImage(this.enemyfrontdamage,this.getX() - Camera.x,this.getY() - Camera.y,null);
+			g.drawImage(this.enemyfrontdamage,this.getX() - Camera.x,this.getY() - Camera.y,null);
+			//this.blood(g, 10);
 		}
 		if(back && !isDamaged) {
 		g.drawImage(this.enemyback,this.getX() - Camera.x,this.getY() - Camera.y,null);

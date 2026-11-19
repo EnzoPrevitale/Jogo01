@@ -1,52 +1,38 @@
 package com.jogo.main;
 	
-	import java.awt.event.KeyEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-
 import java.awt.Canvas;
 import java.awt.Color;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.Toolkit;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
-
-import javax.swing.JButton;
+import java.io.Serial;
+import java.util.*;
 import javax.swing.JFrame;
-
-import com.jogo.entities.Ammo;
-import com.jogo.entities.AssaultRifle;
 import com.jogo.entities.Bullet;
 import com.jogo.entities.Enemy;
 import com.jogo.entities.Entity;
 import com.jogo.entities.Gun38;
-import com.jogo.entities.Heart;
 import com.jogo.entities.Player;
 import com.jogo.graphics.Spritesheet;
 import com.jogo.graphics.UI;
-import com.jogo.world.AStar;
-import com.jogo.world.Camera;
 import com.jogo.world.World;
 
 import java.awt.image.DataBufferInt;
 
 	public class Game extends Canvas implements Runnable, KeyListener, MouseListener, MouseMotionListener{
 
-		private static final long serialVersionUID = 1L;
+		@Serial
+        private static final long serialVersionUID = 1L;
 		
 		public static boolean saveGame = false;
 		
@@ -60,7 +46,7 @@ import java.awt.image.DataBufferInt;
 		public static boolean fpsTime;
 		public static double timer;
 		
-		private BufferedImage image;
+		private final BufferedImage image;
 		
 		public static boolean battle = false;
 		
@@ -98,7 +84,7 @@ import java.awt.image.DataBufferInt;
 		public int[] pixels;
 		
 		public static BufferedImage minimap;
-		public static int minimapPixels[];
+		public static int[] minimapPixels;
 		
 		public static int enemyID;
 		
@@ -128,8 +114,6 @@ import java.awt.image.DataBufferInt;
 			entities.add(player);
 			menu = new Menu();
 			character = new Character();
-			sound = new Sound();
-			
 		}
 		
 		public void initFrame() {
@@ -163,16 +147,10 @@ import java.awt.image.DataBufferInt;
 		}
 		
 		public void tick() {
-			Enemy.depth = 9;
-			Ammo.depth = 1;
-			Gun38.depth = 1;
-			AssaultRifle.depth = 1;
-			Heart.depth = 1;
-			
-			if(player.iPressed && !player.inventoryOpen) {
+            if(player.iPressed && !player.inventoryOpen) {
 				player.iPressed = false;
 				player.inventoryOpen= true;
-			}else if(player.iPressed && player.inventoryOpen) {
+			}else if(player.iPressed) {
 				player.iPressed = false;
 				player.inventoryOpen = false;
 				player.inventory.curOption = 0;
@@ -186,89 +164,75 @@ import java.awt.image.DataBufferInt;
 				bttl = new Battle(enemies.get(enemyID));
 			}
 			
-			if(gameState == "NORMAL") {
-				if(this.saveGame) {
-					ui.save = true;
-					this.saveGame = false;
+			if(Objects.equals(gameState, "NORMAL")) {
+				if(saveGame) {
+					UI.save = true;
+					saveGame = false;
 					String[] opt1 = {"a","b","c","d","e","f","g","h","i", "j","k","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P"};
-					int[] opt2 = {this.cur_level, (int) player.health, (int) player.x, (int) player.y,
-							player.obtRevolver, player.ammo[0], player.xp, player.level, player.dir, player.currentSlot,(int)player.maxHealth,
-							player.inventory.slotID[0][0],player.inventory.slotID[0][1],player.inventory.slotID[0][2],player.inventory.slotID[0][3],player.inventory.slotID[1][0],
-									player.inventory.slotID[1][1],player.inventory.slotID[1][2],player.inventory.slotID[1][3],player.inventory.slotID[2][0],
-									player.inventory.slotID[2][1],player.inventory.slotID[2][2],player.inventory.slotID[2][3],player.inventory.slotID[3][0],
-									player.inventory.slotID[3][1],player.inventory.slotID[3][2],player.inventory.slotID[3][3]};
+					int[] opt2 = {cur_level, (int) Player.health, (int) player.x, (int) player.y,
+							player.obtRevolver, player.ammo[0], Player.xp, Player.level, player.dir, player.currentSlot,(int) Player.maxHealth,
+							Inventory.slotID[0][0], Inventory.slotID[0][1], Inventory.slotID[0][2], Inventory.slotID[0][3], Inventory.slotID[1][0],
+									Inventory.slotID[1][1], Inventory.slotID[1][2], Inventory.slotID[1][3], Inventory.slotID[2][0],
+									Inventory.slotID[2][1], Inventory.slotID[2][2], Inventory.slotID[2][3], Inventory.slotID[3][0],
+									Inventory.slotID[3][1], Inventory.slotID[3][2], Inventory.slotID[3][3]};
 					Menu.saveGame(opt1,opt2,20);
 				}
 				
-				this.restartGame = false;
-			for(int i = 0; i < entities.size(); i++) {
-				Entity e = entities.get(i);
-				e.tick();
-			}
+				restartGame = false;
+                for (Entity e : entities) {
+                    e.tick();
+                }
+
+                for (Bullet bullet : bullets) {
+                    bullet.tick();
+                }
 			
-			for(int i = 0; i < bullets.size(); i++) {
-				bullets.get(i).tick();
-			}
-			
-			/*if(player.getX() == 32 && player.getY() == 32) {
-				cur_level++;
-				if(cur_level > max_level) {
-					cur_level = 1;
-				}
-				String newWorld = "level"+cur_level+".png";
-				world.restartGame(newWorld);
-			}*/
-			
-			}else if(gameState == "GAME_OVER") {
+			}else if(Objects.equals(gameState, "GAME_OVER")) {
 				this.gameOverFrames++;
 				if(gameOverFrames == 50) {
 					this.gameOverFrames = 0;
-					if(this.showMessageGameOver) {
-						this.showMessageGameOver = false;
-					}else {
-						this.showMessageGameOver = true;
-					}
+                    this.showMessageGameOver = !this.showMessageGameOver;
 					
 					if(restartGame) {
-						this.restartGame = false;
-						this.gameState = "NORMAL";
-						player.health = Player.maxHealth;
+						restartGame = false;
+						gameState = "NORMAL";
+						Player.health = Player.maxHealth;
 						cur_level=1;
 						String newWorld = "level"+cur_level+".png";
-						world.restartGame(newWorld);
+						World.restartGame(newWorld);
 					}
 				}
-			}else if(gameState == "MENU") {
+			}else if(Objects.equals(gameState, "MENU")) {
 				menu.tick();
 			}
-				if(gameState == "INVENTORY") {
+				if(Objects.equals(gameState, "INVENTORY")) {
 					player.inventory.tick();
 				}
 				
-				if(gameState == "CHARACTER") {
+				if(Objects.equals(gameState, "CHARACTER")) {
 					character.tick();
 				}
 				
-				if(gameState == "BATTLE") {
+				if(Objects.equals(gameState, "BATTLE")) {
 					bttl.tick();
 				}
 			
-			if(gameState == "RESTART_GAME") {
-				this.gameState = "MENU";
+			if(Objects.equals(gameState, "RESTART_GAME")) {
+				gameState = "MENU";
 				
 				for(int xx = 0; xx < 4; xx ++) {
 					for(int yy = 0; yy < 4; yy++) {
-					player.inventory.slotID[yy][xx] = 0;
+					Inventory.slotID[yy][xx] = 0;
 					}
 				}		
 				player.currentSlot = 0;
-				player.xp = 0;
-				player.level = 1;
-				player.health = player.maxHealth;
+				Player.xp = 0;
+				Player.level = 1;
+				Player.health = Player.maxHealth;
 				
 				cur_level=1;
 				String newWorld = "level"+cur_level+".png";
-				world.restartGame(newWorld);
+				World.restartGame(newWorld);
 			}
 		}
 		
@@ -302,28 +266,28 @@ import java.awt.image.DataBufferInt;
 			g.setColor(new Color (0,0,0));
 			g.fillRect(0, 0, WIDTH*SCALE, HEIGHT*SCALE);
 			/*Renderização do Jogo*/
-			Collections.sort(entities,Entity.depthSorter);
+			entities.sort(Entity.depthSorter);
 			Graphics2D g2d = (Graphics2D) g;
 			world.render(g);
-			for(int i = 0; i < entities.size(); i++) {
-				Entity e = entities.get(i);
-				e.render(g);
-			}
-			for(int i = 0; i < bullets.size(); i++) {
-				bullets.get(i).render(g);
-			}
+            for (Entity e : entities) {
+                e.render(g);
+            }
+            for (Bullet bullet : bullets) {
+                bullet.render(g);
+            }
 			ui.render(g);
 			
 			
 			g.setColor(Color.white);
 			
-			/***/
+			/**/
 			g.dispose();
 			g = bs.getDrawGraphics();
 			g.drawImage(image,0,0,WIDTH*SCALE,HEIGHT*SCALE,null);
-			if(gameState != "INVENTORY") {
+			if(!Objects.equals(gameState, "INVENTORY")) {
 				ui.renderSlots(g);
 			}
+
 			/*if(gameState == "NORMAL" || gameState == "INVENTORY") {
 				world.renderMinimap();
 				g.setColor(Color.white);
@@ -331,7 +295,7 @@ import java.awt.image.DataBufferInt;
 				g.drawImage(minimap,7,HEIGHT*SCALE-20*7,20*7,20*7,null);
 			}*/
 		
-			if(gameState == "GAME_OVER") {
+			if(Objects.equals(gameState, "GAME_OVER")) {
 				Graphics2D g2 = (Graphics2D) g;
 				g2.setColor(new Color(0,0,0,100));
 				g2.fillRect(0, 0, WIDTH*SCALE, HEIGHT*SCALE);
@@ -342,15 +306,16 @@ import java.awt.image.DataBufferInt;
 				
 				drawCenteredString(g, "Você morreu!", gmOvRect, new Font("arial",Font.BOLD,40));
 				g.setColor(Color.gray);
-				if(showMessageGameOver)
-				drawCenteredString(g, ">Pressione ENTER para reiniciar<", screen, new Font("arial",Font.BOLD,20));
-			}else if(gameState == "MENU") {
+				if(showMessageGameOver) {
+					drawCenteredString(g, ">Pressione ENTER para reiniciar<", screen, new Font("arial", Font.BOLD, 20));
+				}
+			}else if(Objects.equals(gameState, "MENU")) {
 				menu.render(g);
-			}else if(gameState == "INVENTORY") {
+			}else if(Objects.equals(gameState, "INVENTORY")) {
 				player.inventory.render(g);
-			}else if(gameState == "CHARACTER") {
+			}else if(Objects.equals(gameState, "CHARACTER")) {
 				character.render(g);
-			}else if(gameState == "BATTLE") {
+			}else if(Objects.equals(gameState, "BATTLE")) {
 				bttl.render(g);
 			}
 			
@@ -393,27 +358,27 @@ import java.awt.image.DataBufferInt;
 			{
 			case KeyEvent.VK_D:
 				player.right = true;
-				if(gameState == "MENU") {
+				if(Objects.equals(gameState, "MENU")) {
 					menu.right = true;
-				}else if(gameState == "INVENTORY" && !player.inventory.optOpen) {
+				}else if(Objects.equals(gameState, "INVENTORY") && !player.inventory.optOpen) {
 					player.inventory.right = true;
-				}else if(gameState == "CHARACTER") {
+				}else if(Objects.equals(gameState, "CHARACTER")) {
 					character.right = true;
-				}else if(gameState == "BATTLE") {
-					this.bttl.right = true;
+				}else if(Objects.equals(gameState, "BATTLE")) {
+					Battle.right = true;
 					//System.out.println(bttl.right);
 				}
 			break;
 			case KeyEvent.VK_A:
 				player.left = true;
-				if(gameState == "MENU") {
+				if(Objects.equals(gameState, "MENU")) {
 					menu.left = true;
-				}else if(gameState == "INVENTORY" && !player.inventory.optOpen) {
+				}else if(Objects.equals(gameState, "INVENTORY") && !player.inventory.optOpen) {
 					player.inventory.left = true;
-				}else if(gameState == "CHARACTER") {
+				}else if(Objects.equals(gameState, "CHARACTER")) {
 					character.left = true;
-				}else if(gameState == "BATTLE") {
-					bttl.left = true;
+				}else if(Objects.equals(gameState, "BATTLE")) {
+					Battle.left = true;
 				}
 			break;
 			}
@@ -422,134 +387,107 @@ import java.awt.image.DataBufferInt;
 			{
 			case KeyEvent.VK_W:
 				player.up = true;
-				if(gameState == "MENU" && !menu.cgOpt) {
+				if(Objects.equals(gameState, "MENU") && !menu.cgOpt) {
 					menu.up = true;
-				}else if(gameState == "INVENTORY") {
+				}else if(Objects.equals(gameState, "INVENTORY")) {
 					player.inventory.up = true;
-				}else if(gameState == "CHARACTER") {
+				}else if(Objects.equals(gameState, "CHARACTER")) {
 					character.up = true;
-				}else if(gameState == "BATTLE") {
-					bttl.up = true;
+				}else if(Objects.equals(gameState, "BATTLE")) {
+					Battle.up = true;
 				}
 			break;
 			case KeyEvent.VK_S:
 				player.down = true;
-				if(gameState == "MENU" && !menu.cgOpt) {
+				if(Objects.equals(gameState, "MENU") && !menu.cgOpt) {
 					menu.down = true;
-				}else if(gameState == "INVENTORY") {
+				}else if(Objects.equals(gameState, "INVENTORY")) {
 					player.inventory.down = true;
-				}else if(gameState == "CHARACTER") {
+				}else if(Objects.equals(gameState, "CHARACTER")) {
 					character.down = true;
-				}else if(gameState == "BATTLE") {
-					bttl.down = true;
+				}else if(Objects.equals(gameState, "BATTLE")) {
+					Battle.down = true;
 				}
 			break;
 			}
-			
-			switch(e.getKeyCode())
-			{
-			case KeyEvent.VK_SHIFT:
-				if(!player.isJumping)
-				player.sprint = true;
-			break;
-			}
-			
-			switch (e.getKeyCode())
-			{
-			case KeyEvent.VK_ENTER:
-				this.restartGame = true;
-				if(gameState == "MENU") {
-					menu.enter = true;
-				}
-				
-			break;
-			}
-			switch (e.getKeyCode())
-			{
-			case KeyEvent.VK_R:
-				if(gameState == "NORMAL") {
-					
-				}
-			break;
-			}
-			
-			switch(e.getKeyCode())
-			{
-			case KeyEvent.VK_RIGHT:
-				if(gameState == "INVENTORY") player.inventory.swap = true;
-			break;
-			}
-			
-			switch(e.getKeyCode())
-			{
-			case KeyEvent.VK_LEFT:
-				if(gameState == "CHARACTER") character.swap = true;
-			}
+
+            if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
+                if (!player.isJumping)
+                    player.sprint = true;
+            }
+
+            if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                restartGame = true;
+                if (Objects.equals(gameState, "MENU")) {
+                    menu.enter = true;
+                }
+            }
+
+            if (e.getKeyCode() == KeyEvent.VK_R) {
+                if(Objects.equals(gameState, "NORMAL")) {
+					// Recarregar arma
+                }
+            }
+
+            if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
+                if (Objects.equals(gameState, "INVENTORY")) player.inventory.swap = true;
+            }
+
+            if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+                if (Objects.equals(gameState, "CHARACTER")) character.swap = true;
+            }
 			
 			
-			if(gameState == "NORMAL" || gameState == "INVENTORY" || (gameState == "CHARACTER" && !character.newGame) ) {
-				switch (e.getKeyCode())
-				{
-				case KeyEvent.VK_I:
-					player.iPressed = true;
-					player.inventory.curSlotX = 0;
-					player.inventory.curSlotY = 0;
-					character.close();
-				break;
-				}
+			if(
+				Objects.equals(gameState, "NORMAL") ||
+				Objects.equals(gameState, "INVENTORY") ||
+				(Objects.equals(gameState, "CHARACTER") && !character.newGame)
+			) {
+                if (e.getKeyCode() == KeyEvent.VK_I) {
+                    player.iPressed = true;
+                    player.inventory.curSlotX = 0;
+                    player.inventory.curSlotY = 0;
+                    character.close();
+                }
 				
 			}
-			
-			/*if(e.getKeyCode() == KeyEvent.VK_I) {
-				if(gameState == "CHARACTER") player;
-			}*/
 			
 			if(e.getKeyCode() == KeyEvent.VK_ESCAPE) {
 				menu.escPressed = true;
 				
-			if(gameState == "NORMAL") {
+			if(Objects.equals(gameState, "NORMAL")) {
 				if(!player.inventoryOpen) {
 				gameState = "MENU";
-				menu.pause = true;
+				Menu.pause = true;
 				menu.currentOption = 0;
 				}
-			}else if(gameState == "MENU" && menu.pause) {
+			}else if(Objects.equals(gameState, "MENU") && Menu.pause) {
 				gameState = "NORMAL";
-				menu.pause = false;
+				Menu.pause = false;
 				Sound.play.play();
 			}
 			}
-			
-			switch(e.getKeyCode())
-			{
-			case KeyEvent.VK_SPACE:
-				if(gameState == "NORMAL")
-				player.jump = true;
-			}
-			switch(e.getKeyCode())
-			{
-			case KeyEvent.VK_E:
-				if(gameState == "NORMAL") {
-					if(player.fastSlotID[player.currentSlot] == 3) {
-						Game.player.useApple(player.currentSlot, 0);
-					}
-					
-					else if(player.fastSlotID[player.currentSlot] == 4) {
-						Game.player.useGreenApple(player.currentSlot, 0);
-					}
-					
-					else if(player.fastSlotID[player.currentSlot] == 5) {
-						player.useGoldenApple(player.currentSlot, 0);
-					}
-				}
-				 if(gameState == "NORMAL") this.saveGame = true;
-			else if(gameState == "INVENTORY") player.inventory.e = true;
-			else if(gameState == "CHARACTER") character.enter = true;
-			else if(gameState == "BATTLE") bttl.select = true;
-					
-			break;
-			}
-		if(gameState == "NORMAL") {	
+
+            if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                if (Objects.equals(gameState, "NORMAL"))
+                    player.jump = true;
+            }
+            if (e.getKeyCode() == KeyEvent.VK_E) {
+                if (Objects.equals(gameState, "NORMAL")) {
+                    if (player.fastSlotID[player.currentSlot] == 3) {
+                        Game.player.useApple(player.currentSlot, 0);
+                    } else if (player.fastSlotID[player.currentSlot] == 4) {
+                        Game.player.useGreenApple(player.currentSlot, 0);
+                    } else if (player.fastSlotID[player.currentSlot] == 5) {
+                        player.useGoldenApple(player.currentSlot, 0);
+                    }
+                }
+                if (Objects.equals(gameState, "NORMAL")) saveGame = true;
+                else if (Objects.equals(gameState, "INVENTORY")) player.inventory.e = true;
+                else if (Objects.equals(gameState, "CHARACTER")) character.enter = true;
+                else if (Objects.equals(gameState, "BATTLE")) Battle.select = true;
+            }
+		if(Objects.equals(gameState, "NORMAL")) {
 			switch(e.getKeyCode())
 			{
 			case KeyEvent.VK_1:
@@ -562,12 +500,9 @@ import java.awt.image.DataBufferInt;
 				player.currentSlot = 2;
 			break;
 			}
-			switch (e.getKeyCode())
-			{
-			case KeyEvent.VK_I:
-				player.iPressed = true;
-			break;
-			}
+            if (e.getKeyCode() == KeyEvent.VK_I) {
+                player.iPressed = true;
+            }
 			}
 			}
 
@@ -613,32 +548,25 @@ import java.awt.image.DataBufferInt;
 
 		@Override
 		public void mousePressed(MouseEvent e) {
-			switch(e.getButton())
-			{
-			case MouseEvent.BUTTON1:
-				if(player.with[1] && player.ammo[0] > 0) {
-				player.mouseShoot = true;
-				player.mx = (e.getX() / SCALE);
-				player.my = (e.getY() / SCALE);
-				}else if(player.with[2]) {
-					player.rightButtonPressed = true;
-					player.mxA = e.getX()/SCALE;
-					player.myA = e.getY()/SCALE;
-				}
-			break;
-			
-			
-			}
+            if (e.getButton() == MouseEvent.BUTTON1) {
+                if (player.with[1] && player.ammo[0] > 0) {
+                    player.mouseShoot = true;
+                    player.mx = (e.getX() / SCALE);
+                    player.my = (e.getY() / SCALE);
+                } else if (player.with[2]) {
+                    player.rightButtonPressed = true;
+                    player.mxA = (double) e.getX() / SCALE;
+                    player.myA = (double) e.getY() / SCALE;
+                }
+            }
 		}
 		
 
 		@Override
 		public void mouseReleased(MouseEvent e) {
-			switch(e.getButton())
-			{
-			case MouseEvent.BUTTON1:
-				player.rightButtonPressed = false;
-			}
+            if (e.getButton() == MouseEvent.BUTTON1) {
+                player.rightButtonPressed = false;
+            }
 		}
 
 		@Override
@@ -655,8 +583,8 @@ import java.awt.image.DataBufferInt;
 
 		@Override
 		public void mouseDragged(MouseEvent e) {
-			player.mxA = e.getX()/SCALE;
-			player.myA = e.getY()/SCALE;
+			player.mxA = (double) e.getX() /SCALE;
+			player.myA = (double) e.getY() /SCALE;
 		}
 
 		@Override

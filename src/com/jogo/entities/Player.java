@@ -349,6 +349,7 @@ public class Player extends Entity{
 		inventory = new Inventory();
 	}
 
+	@Override
 	public void tick() {
 		depth = 10;
 		
